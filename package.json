@@ -1,0 +1,18 @@
+{
+  "name": "automata-football",
+  "version": "1.0.0",
+  "description": "a webgame that about football with cellular automata",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "game"
+  ],
+  "author": "Stanley C. Kemp",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^7.4.5"
+  }
+}

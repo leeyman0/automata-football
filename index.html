@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chaos Option</title>
+  </head>
+  <style>
+    * {
+	font-family: Courier;
+    }
+  </style>
+  <body>
+    <div id="gamearea">
+      <div id="gamebox">
+	<!-- This is where we put the scores -->
+	<div id="scorebox"></div>
+	<!-- This is the screen running on the Javascript engine -->
+	<svg id="gamescreen" width="1000" height="1000">
+	  <script>
+	    // Game setup goes here
+	    const off_color = "#0000FF";
+	    const on_color = "#FFFFFF";
+	    const end_field_off_color = "#FF0000";
+	    const end_field_on_color = "#FFFFFF";
+	    const opponent_on_color = "#AAAAAA";
+	    const opponent_off_color = "#5555AA";
+	    const opponent_end_field_off_color = "#00FF00";
+	    const opponent_end_field_on_color = "#FFFFFF";
+	    const screen_height = 1000;
+	    const screen_width = 1000;
+	    const board_height = 74;
+	    const board_width = 74;
+	    const spot_width = screen_width / board_width;
+	    const spot_height = screen_height / board_height;
+	    const screen = document.getElementById("gamescreen");
+	    // Initialize screen
+	    // For loops... blecch
+	    // Off and on matrices are used to denote which color to fill in each cell
+	    let off_matrix = [];
+	    let on_matrix = [];
+	    let screen_matrix = [];
+	    for (let i = 0; i < board_height; i++) {
+		let matrix_row = [];
+		let off_matrix_row = [];
+		let on_matrix_row = [];
+		for (let j = 0; j < board_width; j++) {
+		    // Creating an addressable square
+		    let current_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+		    current_rect.setAttribute("x", j * spot_width);
+		    current_rect.setAttribute("y", i * spot_height);
+		    current_rect.setAttribute("width", spot_width);
+		    current_rect.setAttribute("height", spot_height);
+		    current_rect.id = `pixel${i}_${j}`;
+
+		    matrix_row.push(current_rect);
+		    // Adding it to the game screen
+		    screen.appendChild(current_rect);
+		    // Making the off and on matrices, and setting the fill of the gamefield
+		    if (j === 0) {
+			on_matrix_row.push(end_field_on_color);
+			off_matrix_row.push(end_field_off_color);
+			current_rect.setAttribute("fill", end_field_off_color);
+		    }
+		    else if (j < board_width / 2) {
+			on_matrix_row.push(on_color);
+			off_matrix_row.push(off_color);
+			current_rect.setAttribute("fill", off_color);   
+		    } else if (j === board_width - 1) {
+			on_matrix_row.push(opponent_end_field_on_color);
+			off_matrix_row.push(opponent_end_field_off_color);
+			current_rect.setAttribute("fill", opponent_end_field_off_color);
+		    } else {
+			on_matrix_row.push(opponent_on_color);
+			off_matrix_row.push(opponent_off_color);
+			current_rect.setAttribute("fill", opponent_off_color);
+		    }
+		    
+		}
+		on_matrix.push(on_matrix_row);
+		off_matrix.push(off_matrix_row);
+		screen_matrix.push(matrix_row);
+	    }
+	  </script>
+	</svg>
+	<button id="nextiterbutton">Next Iteration</button>
+      </div>
+    </div>
+    <br>
+    <script src="./gameoflife.js"></script>
+    <script src="./message_protocol.js"></script>
+    <script>
+      // Building the game 
+      screen.width = screen_width;
+      screen.height = screen_height;
+
+      const gamebox = document.getElementById("gamebox");
+      const score_box = document.getElementById("scorebox");
+      // Game code goes here
+      function image_map(screen, matrix) {
+	  screen.forEach(function (row, row_nr) {
+	      row.forEach(function (col, col_nr) {
+		  col.setAttribute("fill", ((matrix[row_nr][col_nr] === 1) ?
+					    on_matrix[row_nr][col_nr] :
+					    off_matrix[row_nr][col_nr]));
+		  update_score();
+	      });
+	  });
+      }
+      // Initializing the array
+      let image = [];
+      for (let i = 0; i < board_height; i++)
+      {
+	  image.push(new Array(board_width).fill(0));
+      }
+      
+      // Letting the user write data to (only half of the board) each of the cells
+      for (let i = 0; i < board_height; i++)
+	  for (let j = 0; j < board_width / 2; j++)
+      {
+	  document.getElementById(`pixel${i}_${j}`).addEventListener("mousedown", function () {
+	      let pix = document.getElementById(`pixel${i}_${j}`);
+	      // console.log(pix.id + " clicked!");
+	      image[i][j] = (image[i][j] === 0)? 1 : 0;
+	      pix.setAttribute("fill", (image[i][j] === 0)? off_matrix[i][j] : on_matrix[i][j]);
+	  });
+      }
+
+      // This button is primarily for debugging
+      let nextbutton = document.getElementById("nextiterbutton");
+
+      nextbutton.addEventListener("click", function () {
+	  image = next_iteration(image);
+	  image_map(screen_matrix, image);
+      });
+      
+      // Building the name entry layer
+      let name_entry = document.createElement("div");
+      name_entry.innerHTML = "<label id=\"enter_message\">Enter a name:</label>";
+      let name_entry_input = document.createElement("input");
+      name_entry_input.type = "text";
+      name_entry.appendChild(name_entry_input);
+      let name_entry_button = document.createElement("button");
+      name_entry_button.innerHTML = "Name Submit";
+      name_entry.appendChild(name_entry_button);
+
+      // Making the loading screen
+      let loading_screen = document.createElement("div");
+      loading_screen.innerHTML = "Waiting for players...";
+
+      // Setting the name entry layer to default
+      let space = document.getElementById("gamearea");
+      space.innerHTML = "";
+      space.appendChild(name_entry);
+
+      // The score bar
+      let player_score = 0;
+      let opponent_score = 0;
+      // This is set to something else when the name_entry exits successfully
+      let player_name = "Jef";
+      let opponent_name = "boddypin98";
+
+      //
+      let player_div = document.createElement("div");
+      let opponent_div = document.createElement("div");
+      opponent_div.style = "text-align: right";
+
+      // Posts the current score to the screen
+      function update_score() {
+	  let deltas = calculate_score_delta(image);
+	  player_score += deltas.player;
+	  opponent_score += deltas.opponent;
+	  player_div.innerHTML = `${player_name}:${player_score}`;
+	  opponent_div.innerHTML = `${opponent_name}:${opponent_score}`;
+
+      }
+      
+      name_entry_button.addEventListener("click", function () {
+	  // Submit a message to the server
+
+	  // Await response
+
+	  // Tell the user if the name rejected
+
+	  // Go to loading screen if the name was accepted
+	  
+	  player_name = name_entry_input.value;
+
+	  // Replace the name with the game screen
+	  space.innerHTML = "";
+	  space.appendChild(gamebox);
+
+	  // Set up the scorebox
+	  // score_box = document.getElementById("scorebox");
+	  score_box.appendChild(player_div);
+	  score_box.appendChild(opponent_div);
+	  
+	  update_score();
+      });
+
+    </script>
+  </body>
+</html>
