@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Chaos Option</title>
+    <title>Automata Football</title>
   </head>
   <style>
     * {
@@ -146,6 +146,10 @@
       let loading_screen = document.createElement("div");
       loading_screen.innerHTML = "Waiting for players...";
 
+      // Making the name check screen
+      let name_loading_screen = document.createElement("div");
+      name_loading_screen.innerHTML = "Waiting for server...";
+      
       // Setting the name entry layer to default
       let space = document.getElementById("gamearea");
       space.innerHTML = "";
@@ -172,30 +176,8 @@
 	  opponent_div.innerHTML = `${opponent_name}:${opponent_score}`;
 
       }
-      
-      name_entry_button.addEventListener("click", function () {
-	  // Submit a message to the server
-
-	  // Await response
-
-	  // Tell the user if the name rejected
-
-	  // Go to loading screen if the name was accepted
-	  
-	  player_name = name_entry_input.value;
-
-	  // Replace the name with the game screen
-	  space.innerHTML = "";
-	  space.appendChild(gamebox);
-
-	  // Set up the scorebox
-	  // score_box = document.getElementById("scorebox");
-	  score_box.appendChild(player_div);
-	  score_box.appendChild(opponent_div);
-	  
-	  update_score();
-      });
-
-    </script>
+      </script>
+    <script src="socket_address.js"></script>
+    <script src="client.js"></script>
   </body>
 </html>

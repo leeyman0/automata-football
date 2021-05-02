@@ -16,6 +16,8 @@ const Messages = Object.freeze({
     "GAME" : 9, // "You are now in a game with name:"
     "VICTORY" : 10, // You're winner! Reason:
     "DEFEAT" : 11, // You've lost!
+    "MESSAGE" : 12,
+    "SEND_BOARD" : 13,
 });
 
     

@@ -2,7 +2,8 @@ const WebSocket = require("ws");
 const http = require("http");
 const fs = require("fs");
 // This is a websocket server on the port 8082
-const wss = new WebSocket.Server({ port : 8082 });
+const ws_port = 8082;
+const wss = new WebSocket.Server({ port : ws_port});
 
 const Messages = Object.freeze({
     // The client sends these messages
@@ -19,10 +20,11 @@ const Messages = Object.freeze({
     "GAME" : 9, // "You are now in a game with name:"
     "VICTORY" : 10, // You're winner! Reason:
     "DEFEAT" : 11, // You've lost!
-    "MESSAGE" : 12, // Outputs a debug message to the terminal 
+    "MESSAGE" : 12, // Outputs a debug message to the terminal
+    "SEND_BOARD" : 13, // Sending the entire board
 });
 
-// Serving the static webpages
+// Serving the static webpages on https:
 http.createServer(function (request, response) {
     // Simple utility function
     function serveContent(file, type) {
@@ -40,6 +42,13 @@ http.createServer(function (request, response) {
 	serveContent("./message_protocol.js", "text/javascript");
     else if (request.url === "/client.js")
 	serveContent("./client.js", "text/javascript");
+    else if (request.url === "/socket_address.js") {
+	// This file is not literal, it just is the way it connects to the server through the websocket
+	response.writeHead(200, {"Content-Type": "text/javascript"});
+	// So that there is the option for extensibility
+	response.write(`const socket_config = { hostname : \"localhost\",  port : ${ws_port}, \};`);
+	response.end();
+    }
     else
     {
 	console.log(`Requested URL not found: ${request.url}`);
@@ -88,7 +97,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
     var client_name = undefined; 
     
     ws.on("message", function (data) {
-	const message = JSON.parse(data)
+	const message = JSON.parse(data);
 
 	// We are changing the name
 	switch (message.type) {
@@ -100,14 +109,17 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 		    type : Messages.MESSAGE,
 		    message : "You already have a name!"
 		}));
+		ws.send(JSON.stringify({
+		    type: Message.NAME_REJECT,
+		});
 		return;
 	    }
 
 	    // Other types of data can be encoded in the object, even though it has been designated to be a string
 	    if ((typeof message.name) !== "string") {
+		ws.send(message("Your name is not a string!"));
 		ws.send(JSON.stringify({
-		    type : Messages.MESSAGE,
-		    message : "Input rejected, not a string"
+		    type : Messages.NAME_REJECT,
 		}));
 		return;
 	    }
@@ -117,6 +129,9 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 		ws.send(JSON.stringify({
 		    type : Messages.MESSAGE,
 		    message : "Empty name detected, not recorded."
+		}));
+		ws.send(JSON.stringify({
+		    type : Messages.NAME_REJECT,
 		}));
 		return;
 	    }
@@ -135,15 +150,13 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 		client_queue.push(message.name);
 		console.log(`Client ${message.name} has joined the queue!`);
 		ws.send(JSON.stringify({
-		    type : Messages.MESSAGE,
-		    message : "You have joined the queue!"
+		    type : Messages.NAME_ACCEPT,
 		}));
 		
 	    } else {
 		// Will replace with something other in the future
 		ws.send(JSON.stringify({
-		    type : Messages.MESSAGE,
-		    message : `The name ${message.name} is taken. Try again.`
+		    type : Messages.NAME_REJECT,
 		}));
 		return;
 	    }
@@ -209,6 +222,15 @@ setInterval(function () {
 	    type : Messages.MESSAGE,
 	    message : `You are now in a game with ${p1}`
 	}));
+	client_names[p1].socket.send(JSON.stringify({
+	    type : Messages.GAME,
+	    opponent : p2,
+	}));
+	client_names[p2].socket.send(JSON.stringify({
+	    type : Message.GAME,
+	    opponent : p1,
+	}));
+	
 
 	// Assign them a game of some sort
 	const cgid = getNewGameID();
