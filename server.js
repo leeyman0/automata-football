@@ -178,7 +178,7 @@ http.createServer(function (request, response) {
 	console.log(`Requested URL not found: ${request.url}`);
 	response.end();
     }
-}).listen(8080);
+}).listen(80);
 
 
 // I created this too late in the game to really use, but it is a valuable abstraction to make
