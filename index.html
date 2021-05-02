@@ -29,8 +29,9 @@
 	  Automata Football has one goal — to get as many cells to the end of the opponent's field as possible. 
 	  There are four rounds in automata football, each of them being comprised two stages: a building stage and
 	  a simulation stage. The building stage is when a player builds structures by clicking the cells. This stage
-	  is 120 seconds. The simulation stage simulates 250 generations of Conway's game of life over 20 seconds.
-	  Only at this point can points be scored. 
+	  is done when both people have submitted their turns. 
+	  The simulation stage simulates 250 generations of Conway's game of life over 20 seconds.
+	  Only at this point can a touchdown be scored. The person with the most points at the end of the game wins! 
 	</p>
 	<h4 style="text-align : center;">System Requirements</h4>
 	<p style="text-align : center;">
@@ -198,13 +199,19 @@
       defeat_screen.appendChild(defeat_scream);
       
       let end_reason = document.createElement("p");
-      victory_screen.appendChild(end_reason);
+      // victory_screen.appendChild(end_reason);
       defeat_screen.appendChild(end_reason);
+
+      let victory_end_reason = document.createElement("p");
+      victory_screen.appendChild(victory_end_reason);
       
       let continue_button = document.createElement("button");
       continue_button.innerHTML = "Continue";
-      victory_screen.appendChild(continue_button);
       defeat_screen.appendChild(continue_button);
+      
+      let victory_continue_button = document.createElement("button");
+      victory_continue_button.innerHTML = "Continue";
+      victory_screen.appendChild(victory_continue_button);
       // Javascript is such an expressive language!
       
       // Setting the name entry layer to default
@@ -218,11 +225,14 @@
       // This is set to something else when the name_entry exits successfully
       let player_name = "Jef";
       let opponent_name = "boddypin98";
+      let turn = 1;
 
-      //
+      // Creating the things that we will need for the scorebox
       let player_div = document.createElement("div");
+      player_div.style = "text-align: left;";
+      let turn_div = document.createElement("div");
       let opponent_div = document.createElement("div");
-      opponent_div.style = "text-align: right";
+      opponent_div.style = "text-align: right;";
 
       function simulate_turn() {
 	  // Processes the frames one by one, in order
@@ -235,7 +245,6 @@
 	  }
       }
       
-      nextbutton.addEventListener("click", simulate_turn);
       // Posts the current score to the screen
       function update_score() {
 	  let deltas = calculate_score_delta(image);

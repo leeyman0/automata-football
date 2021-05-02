@@ -87,6 +87,23 @@ function next_iteration(matrix) {
 
     return next_matrix;
 }
+// Fitting two two-dimensional arrays together, reversing the second one's rows
+function board_fit_together(board1, board2) {
+    let new_board = [];
+
+    board1.forEach(function (row) {
+	// Damn... what gives...
+	new_board.push([...row]);
+    });
+
+    board2.forEach(function (row, row_nr) {
+	let other_side = [...row].reverse();
+
+	new_board[row_nr] = new_board[row_nr].concat(other_side);
+    });
+
+    return new_board;
+}
 
 function calculate_score_delta(board) {
     let player = 0;
@@ -196,6 +213,8 @@ function new_matrix(p1, p2) {
     // Has each player gone yet?
     let p1_gone = false;
     let p2_gone = false;
+    let p1_score = 0;
+    let p2_score = 0;
 
     return {
 	p1,
@@ -203,6 +222,10 @@ function new_matrix(p1, p2) {
 	lhs,
 	rhs,
 	turn,
+	p1_gone,
+	p2_gone,
+	p1_score,
+	p2_score,
     };
 }
 
@@ -225,7 +248,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
     ws.on("message", function (data) {
 	const message = JSON.parse(data);
 
-	// We are changing the name
+	// The type of the message counts, for more information... message_protocol.js
 	switch (message.type) {
 	case Messages.NAME:
 	    // clients can send their own information using the browser. Therefore, some sanitization is necessary
@@ -289,24 +312,127 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    break;
 	case Messages.TURN:
 	    // We are taking a turn
-	    // A turn is a collection of deltas
-	    // We check to see if the players are all still there
-	    
-	    // We make sure that the deltas are sane, there isn't any hacking going around
-
-	    // First, check to see if the turn came from the right player
-
+	    // A turn is a half of a board
+	    // First we do a little trolling
+	    let our_game = client_games.get(client_names[client_name].gameid);
+	    let is_p1 = our_game.p1 === client_name;
+	    // We check to see if the players are all still there, if not declare victory
+	    // Victory has been achieved utility function
+	    function victory(player, reason) {
+		client_names[player].socket.send(JSON.stringify(
+		    {
+			type : Messages.VICTORY,
+			reason,
+		    }
+		));
+	    }
+	    if (is_p1) {
+		if (client_names[our_game.p2] === undefined)
+		    victory(client_name, "The other player has disconnected!");
+	    } else {
+		if (client_names[our_game.p1] === undefined)
+		    victory(client_name, "The other player has disconnected!");
+	    }
 	    // Second, check to see if the moves are sane
+	    if (message.turn.length !== board_height ||
+		message.turn.some(function (row) {
+		    return row.length !== board_width / 2;
+		})) {
+		// Turn rejected
+		ws.send(JSON.stringify({
+		    type : Messages.TURN_REJECT,
+		}));
+		return;	
+	    } else {
+		// Turn approved!
+		ws.send(JSON.stringify({
+		    type : Messages.TURN_ACCEPT,
+		}));
+	    }
+	    // Applying the changes to the game
+	    if (is_p1) {
+		// They are player 1
+		our_game.lhs = message.turn;
+		our_game.p1_gone = true;
+	    } else {
+		// They are player 2
+		our_game.rhs = message.turn;
+		our_game.p2_gone = true;
+	    }
+	    // Utility function defeat
+	    function defeat(player, reason) {
+		client_names[player].socket.send(JSON.stringify(
+		    {
+			type : Messages.DEFEAT,
+			reason,
+		    } 
+		));
+	    }
+	    
+	    // Thirdly, send the opponent those moves if they have completed
+	    if (our_game.p1_gone && our_game.p2_gone) {
+		// Utility function
+		function send_turn(player, side) {
+		    client_names[player].socket.send(
+			JSON.stringify({
+			    "type" : Messages.SEND_BOARD,
+			    "board" : side,
+			}));
+		}
+		// Send the turns to each player
+		send_turn(our_game.p1, our_game.rhs);
+		send_turn(our_game.p2, our_game.lhs);
+		++our_game.turn;
+		// Thirdly-point-fifthly, complete the moves to calculate the score for each player
+		// Running the game
+		let current_board = board_fit_together(our_game.lhs, our_game.rhs);
+		for (let i = 0; i < frames_per_turn; i++) {
+		    current_board = next_iteration(current_board);
+		    let score_change = calculate_score_delta(current_board);
+		    // Apply the score change to the scores
+		    our_game.p1_score += score_change.player;
+		    our_game.p2_score += score_change.opponent;
+		}
+		// Reset, no one has gone yet this turn
+		our_game.p1_gone = false;
+		our_game.p2_gone = false;
+		// Fourthly, check to see if the game is in an end state, end the game if it has
+		if (our_game.turn > turns) {
+		    setTimeout(function () {
+			if (our_game.p1_score > our_game.p2_score) {
+			    defeat(our_game.p2, "Better luck next time!");
+			    victory(our_game.p1, "Good show!");
+			} else if (our_game.p1_score < our_game.p2_score) {
+			    defeat(our_game.p1, "Better luck next time!");
+			    victory(our_game.p2, "Good show!");
+			} else {
+			    victory(our_game.p1, "You tied!");
+			    victory(our_game.p2, "You tied!");
+			}}, frames_per_turn * frame_interval);
+		}
+	    }
 
-	    // Thirdly, send the opponent those moves
-
-	    // Thirdly-point-fifthly, complete the moves to calculate the score for each player
-
-	    // Fourthly, check to see if the game is in an end state
 	    break;
 	case Messages.CONTINUE:
 	    // On continue, the server should requeue the player inside the name list
 	    // It should break the player away from the current game
+	    // Since the current game is over, if both names are set to undefined in the game,
+	    // it should be eliminated from client_games
+	    // Eliminate the name from the game
+	    let former_game = client_games.get(client_names[client_name].cgid);
+	    if (former_game !== undefined) {
+		if (client_name === former_game.p1)
+		    former_game.p1 = undefined;
+		else
+		    former_game.p2 = undefined;
+
+		// Eliminate the game, it is done. 
+		if (former_game.p1 === undefined && former_game.p2 === undefined)
+		    client_games.delete(client_names[client_name].cgid);
+	    }
+	    // Requeue the player
+	    client_queue.push(client_name);
+	    
 	    break;
 	default:
 	    ws.send(JSON.stringify({

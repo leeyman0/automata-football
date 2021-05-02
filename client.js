@@ -44,7 +44,8 @@ ws.addEventListener("message", function (e) {
 	// Initialization of player and opponent score
 	player_score = 0;
 	opponent_score = 0;
-
+	turn = 1;
+	
 	// Initialization of player and opponent names
 	opponent_name = instruction.opponent;
 	player_name = name_entry_input.value;
@@ -53,12 +54,23 @@ ws.addEventListener("message", function (e) {
 	space.innerHTML = "";
 	space.appendChild(gamebox);
 
+	turn_div.innerHTML = `Turn ${turn}`;
+	
 	if (first_game) {
 	    // Set up the scorebox
 	    // score_box = document.getElementById("scorebox");
 	    score_box.appendChild(player_div);
+	   
+	    score_box.appendChild(turn_div);
 	    score_box.appendChild(opponent_div);
 	    first_game = false;
+	} else {
+	    image = [];
+	    for (let i = 0; i < board_height; i++)
+	    {
+		image.push(new Array(board_width).fill(0));
+	    }
+	    image_map(screen_matrix, image);
 	}
 	
 	update_score();
@@ -66,15 +78,31 @@ ws.addEventListener("message", function (e) {
     case Messages.VICTORY:
 	// Display some sort of victory message
 	console.log("Victory has been achieved!");
+	space.innerHTML = "";
+	space.appendChild(victory_screen);
+	victory_end_reason.innerHTML = instruction.reason;
 	break;
     case Messages.DEFEAT:
 	// Display a message of defeat
 	console.log("Defeat has been achieved!");
+	space.innerHTML = "";
+	space.appendChild(defeat_screen);
+	end_reason.innerHTML = instruction.reason;
 	break;
     case Messages.SEND_BOARD:
 	// The next turn can now be emulated
-	
-	
+	let rhs = instruction.board;
+	let lhs = image.map(function (row) {
+	    return row.slice(0, board_width / 2);
+	});
+	image = board_fit_together(rhs, lhs);
+	image_map(screen_matrix, image);
+	simulate_turn();
+	// At the end, update the turn
+	setTimeout(function () {
+	    ++turn;
+	    turn_div.innerHTML = `Turn ${turn}`;
+	}, frames_per_turn * frame_interval);
 	break;
     case Messages.MESSAGE:
 	console.log("Server says: " + instruction.message);
@@ -95,4 +123,37 @@ name_entry_button.addEventListener("click", function () {
 
     space.innerHTML = "";
     space.appendChild(name_loading_screen);
+});
+
+continue_button.addEventListener("click", function () {
+    space.innerHTML = "";
+    space.appendChild(loading_screen);
+
+    // This requeues the user in a game
+    wsend({
+	"type" : Messages.CONTINUE,
+    });
+});
+
+victory_continue_button.addEventListener("click", function () {
+    space.innerHTML = "";
+    space.appendChild(loading_screen);
+
+    // This requeues the user in a game
+    wsend({
+	"type" : Messages.CONTINUE,
+    });
+});
+
+
+nextbutton.addEventListener("click", function () {
+    let board = image.map(function (row) {
+	return row.slice(0, board_width / 2);
+    });
+
+    // Saying to the server, this is our turn!
+    wsend({
+	"type" : Messages.TURN,
+	"turn" : board,
+    });
 });
