@@ -145,6 +145,8 @@ const Messages = Object.freeze({
     "SEND_BOARD" : 13, // Sending the entire board
 });
 
+let web_port = process.env.port || 8080;
+
 // Serving the static webpages on https:
 http.createServer(function (request, response) {
     // Simple utility function
@@ -178,7 +180,7 @@ http.createServer(function (request, response) {
 	console.log(`Requested URL not found: ${request.url}`);
 	response.end();
     }
-}).listen(80);
+}).listen(web_port);
 
 
 // I created this too late in the game to really use, but it is a valuable abstraction to make
