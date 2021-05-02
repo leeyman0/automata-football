@@ -1,6 +1,6 @@
 // Where the backend to frontend code goes
 console.log(socket_config);
-const ws = new WebSocket(`ws://${socket_config.hostname}:${socket_config.port}`);
+const ws = new WebSocket(`wss://${socket_config.hostname}:${socket_config.port}`);
 
 ws.addEventListener("open", function () {
     console.log("Connected!");
