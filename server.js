@@ -5,6 +5,110 @@ const fs = require("fs");
 const ws_port = 8082;
 const wss = new WebSocket.Server({ port : ws_port});
 
+// Shared constants
+const board_height = 74;
+const board_width = 74;
+// Game constants
+const frames_per_turn = 250;
+const frame_interval = 80;
+const turns = 4;
+
+// The game engine
+function next_iteration(matrix) {
+    // Filling the next matrix with numbers
+    let next_matrix = [];
+    for (let i = 0; i < board_height; i++)
+    {
+	next_matrix.push(new Array(board_width).fill(0));
+    }
+    
+    matrix.forEach(function (row, row_nr, mat) {
+	let number_of_cols = row.length; 
+	let number_of_rows = mat.length;
+	let top_edge = row_nr === 0;
+	let bottom_edge = row_nr === number_of_rows - 1;
+	row.forEach(function (col, col_nr, columns) {
+	    // Are we on the bottom edge
+	    let left_edge = col_nr === 0;
+	    let right_edge = col_nr === number_of_cols - 1;
+
+	    let neighbors = 0;
+
+	    // Definitely not repetitive at all, but it gets done eventually
+	    if (!top_edge) {
+		if (!left_edge) {
+		    if (mat[row_nr - 1][col_nr - 1] === 1)
+			++neighbors;
+		}
+		if (mat[row_nr - 1][col_nr] === 1)
+		    ++neighbors;
+		if (!right_edge) {
+		    if (mat[row_nr - 1][col_nr + 1] === 1)
+			++neighbors;
+		}
+	    }
+	    if (!left_edge) {
+		if (mat[row_nr][col_nr - 1] === 1)
+		    ++neighbors;
+	    }
+	    if (!right_edge) {
+		if (mat[row_nr][col_nr + 1] === 1)
+		    ++neighbors;
+	    }
+	    if (!bottom_edge) {
+		if (!left_edge) {
+		    if (mat[row_nr + 1][col_nr - 1] === 1)
+			++neighbors;
+		}
+		if (mat[row_nr + 1][col_nr] === 1)
+		    ++neighbors;
+		if (!right_edge) {
+		    if (mat[row_nr + 1][col_nr + 1] === 1)
+			++neighbors;
+		}
+	    }
+	    
+	    // if (neighbors != 0)
+	    //   console.log(`row: ${row_nr}, col: ${col_nr}, neighbors ${neighbors}`);
+	    
+	    // Game rules go here
+	    if (neighbors > 3 || neighbors < 2)
+		next_matrix[row_nr][col_nr] = 0; // Overpopulated or underpopulated
+	    else if (mat[row_nr][col_nr] === 0 && neighbors === 3) 
+		next_matrix[row_nr][col_nr] = 1; // Newly populated cell
+	    else if (mat[row_nr][col_nr] === 1)
+		next_matrix[row_nr][col_nr] = 1; // Surviving cell
+	    else
+		next_matrix[row_nr][col_nr] = 0; // Does not meet the requirements
+	    
+			     
+	});
+    });
+
+    return next_matrix;
+}
+
+function calculate_score_delta(board) {
+    let player = 0;
+    let opponent = 0;
+
+    board.forEach(function (row) {
+	if (row[0] === 1) {
+	    ++opponent;
+	    row[0] = 0;
+	}
+	if (row[row.length - 1] === 1) {
+	    ++player;
+	    row[row.length - 1] = 0;
+	}
+    });
+
+    return {
+	player,
+	opponent
+    };
+}
+
 const Messages = Object.freeze({
     // The client sends these messages
     "NAME" : 0, // "can this be my name?"
@@ -46,7 +150,10 @@ http.createServer(function (request, response) {
 	// This file is not literal, it just is the way it connects to the server through the websocket
 	response.writeHead(200, {"Content-Type": "text/javascript"});
 	// So that there is the option for extensibility
-	response.write(`const socket_config = { hostname : \"localhost\",  port : ${ws_port}, \};`);
+	// Works for localhost, but probably not much else
+	let hostname = request.headers.host.split(":")[0]; 
+	response.write(`const socket_config = { hostname : \"${hostname}\",  port : ${ws_port}, \};`);
+	// console.log(request.headers);
 	response.end();
     }
     else
@@ -57,11 +164,11 @@ http.createServer(function (request, response) {
 }).listen(8080);
 
 
-// I created this too late in the game to use, but it is a valuable abstraction to make
+// I created this too late in the game to really use, but it is a valuable abstraction to make
 function message(message_contents) {
     return JSON.stringify({
 	type : Messages.MESSAGE,
-	message : message-contents,
+	message : message_contents,
     });
 }
 
@@ -71,7 +178,7 @@ function message(message_contents) {
 let client_names = {};
 // Client games contains all of the data for the games that the players play by gameid
 // Mapped with game-id (mostly internal usage)
-let client_games = new WeakMap();
+let client_games = new Map();
 // We are generating new game ids by counting up from zero, like a serial number
 let new_game_id = 0;
 function getNewGameId() {
@@ -79,6 +186,25 @@ function getNewGameId() {
 }
 // Does the queue
 let client_queue = [];
+
+function new_matrix(p1, p2) {
+    // Initialize the beginning matrix for each player
+    // This should do for now
+    let lhs = [];
+    let rhs = [];
+    let turn = 1;
+    // Has each player gone yet?
+    let p1_gone = false;
+    let p2_gone = false;
+
+    return {
+	p1,
+	p2,
+	lhs,
+	rhs,
+	turn,
+    };
+}
 
 wss.on("connection", function (ws) { // ws is the web client instance for the connection, when it closes, it sends
     // a message. When it sends a message, it also sends a message
@@ -168,13 +294,13 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    
 	    // We make sure that the deltas are sane, there isn't any hacking going around
 
-	    // When we do the game portion of the architecture, then we shall do this
-
 	    // First, check to see if the turn came from the right player
 
 	    // Second, check to see if the moves are sane
 
-	    // Thirdly, complete the moves if they are, send the opponent those moves
+	    // Thirdly, send the opponent those moves
+
+	    // Thirdly-point-fifthly, complete the moves to calculate the score for each player
 
 	    // Fourthly, check to see if the game is in an end state
 	    break;
@@ -236,11 +362,11 @@ setInterval(function () {
 	}));
 	
 
-	// Assign them a game of some sort
-	const cgid = getNewGameID();
+	// Assign them a game
+	const cgid = getNewGameId();
 	client_names[p1].gameid = cgid;
 	client_names[p2].gameid = cgid;
-	client_games.set(cgid, starting_game(p1, p2));
+	client_games.set(cgid, new_matrix(p1, p2));
 
 	// Tell them the game ID of their game, for no reason at all
 	client_names[p1].socket.send(message(`You are in the game with ID #${cgid} as P1`));

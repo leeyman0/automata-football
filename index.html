@@ -2,18 +2,47 @@
 <html>
   <head>
     <title>Automata Football</title>
+    <meta charset="UTF-8">
   </head>
   <style>
     * {
 	font-family: Courier;
+	text-align: center;
     }
   </style>
   <body>
     <div id="gamearea">
+      <div id="startinginformation">
+	<h3 style="text-align : center;">Automata Football — The Game: How It Works</h3>
+	<p style="text-align : center;">
+	  Hello, and welcome to my website!
+	</p>
+	<br>
+	<p style="text-align : center;">
+	  <i>
+	    Automata football is based off of Conway's game of life;
+	    see <a href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life">Wikipedia</a> for more details.
+	  </i>
+	</p>
+	  <br>
+	<p style="text-align : center;">
+	  Automata Football has one goal — to get as many cells to the end of the opponent's field as possible. 
+	  There are four rounds in automata football, each of them being comprised two stages: a building stage and
+	  a simulation stage. The building stage is when a player builds structures by clicking the cells. This stage
+	  is 120 seconds. The simulation stage simulates 250 generations of Conway's game of life over 20 seconds.
+	  Only at this point can points be scored. 
+	</p>
+	<h4 style="text-align : center;">System Requirements</h4>
+	<p style="text-align : center;">
+	  For compatibility, the browser must support SVGs, ES6 Javascript, and Web Sockets. 
+	</p>
+      </div>
       <div id="gamebox">
 	<!-- This is where we put the scores -->
 	<div id="scorebox"></div>
 	<!-- This is the screen running on the Javascript engine -->
+	<button id="nextiterbutton">Next Turn</button>
+	<br>
 	<svg id="gamescreen" width="1000" height="1000">
 	  <script>
 	    // Game setup goes here
@@ -30,8 +59,9 @@
 	    const board_height = 74;
 	    const board_width = 74;
 	    // Game constants
-	    const frames_per_turn = 500;
+	    const frames_per_turn = 250;
 	    const frame_interval = 80;
+	    const turns = 4;
 	    // Programming constants
 	    const spot_width = screen_width / board_width;
 	    const spot_height = screen_height / board_height;
@@ -85,7 +115,6 @@
 	    }
 	  </script>
 	</svg>
-	<button id="nextiterbutton">Next Iteration</button>
       </div>
     </div>
     <br>
@@ -98,6 +127,7 @@
 
       const gamebox = document.getElementById("gamebox");
       const score_box = document.getElementById("scorebox");
+      const intro = document.getElementById("startinginformation");
       // Game code goes here
       function image_map(screen, matrix) {
 	  screen.forEach(function (row, row_nr) {
@@ -130,18 +160,20 @@
 
       // This button is primarily for debugging
       let nextbutton = document.getElementById("nextiterbutton");
-
-      nextbutton.addEventListener("click", function () {
-	  image = next_iteration(image);
-	  image_map(screen_matrix, image);
-      });
       
       // Building the name entry layer
       let name_entry = document.createElement("div");
-      name_entry.innerHTML = "<label id=\"enter_message\">Enter a name:</label>";
+      name_entry.appendChild(intro);
+      
+      let name_label = document.createElement("label");
+      name_label.id = "enter_message";
+      name_label.innerHTML = "Enter a name:";
+      name_entry.appendChild(name_label);
+
       let name_entry_input = document.createElement("input");
       name_entry_input.type = "text";
       name_entry.appendChild(name_entry_input);
+
       let name_entry_button = document.createElement("button");
       name_entry_button.innerHTML = "Name Submit";
       name_entry.appendChild(name_entry_button);
@@ -192,6 +224,18 @@
       let opponent_div = document.createElement("div");
       opponent_div.style = "text-align: right";
 
+      function simulate_turn() {
+	  // Processes the frames one by one, in order
+	  for (let i = 1; i <= frames_per_turn; i++) {
+	      // Generate a new screen
+	      setTimeout(function () {
+		  image = next_iteration(image);
+		  image_map(screen_matrix, image);
+	      }, i * frame_interval);
+	  }
+      }
+      
+      nextbutton.addEventListener("click", simulate_turn);
       // Posts the current score to the screen
       function update_score() {
 	  let deltas = calculate_score_delta(image);
