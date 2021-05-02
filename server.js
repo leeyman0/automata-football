@@ -145,7 +145,7 @@ const Messages = Object.freeze({
     "SEND_BOARD" : 13, // Sending the entire board
 });
 
-let web_port = process.env.port || 8080;
+let web_port = process.env.PORT || 8080;
 
 // Serving the static webpages on https:
 http.createServer(function (request, response) {
