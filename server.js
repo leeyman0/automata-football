@@ -111,7 +111,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 		}));
 		ws.send(JSON.stringify({
 		    type: Message.NAME_REJECT,
-		});
+		}));
 		return;
 	    }
 
@@ -162,30 +162,34 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    }
 	    break;
 	case Messages.TURN:
-		// We are taking a turn
-		// A turn is a collection of deltas
-		// We check to see if the players are all still there
-		
-		// We make sure that the deltas are sane, there isn't any hacking going around
+	    // We are taking a turn
+	    // A turn is a collection of deltas
+	    // We check to see if the players are all still there
+	    
+	    // We make sure that the deltas are sane, there isn't any hacking going around
 
-		// When we do the game portion of the architecture, then we shall do this
+	    // When we do the game portion of the architecture, then we shall do this
 
-		// First, check to see if the turn came from the right player
+	    // First, check to see if the turn came from the right player
 
-		// Second, check to see if the moves are sane
+	    // Second, check to see if the moves are sane
 
-		// Thirdly, complete the moves if they are, send the opponent those moves
+	    // Thirdly, complete the moves if they are, send the opponent those moves
 
-		// Fourthly, check to see if the game is in an end state
+	    // Fourthly, check to see if the game is in an end state
+	    break;
+	case Messages.CONTINUE:
+	    // On continue, the server should requeue the player inside the name list
+	    // It should break the player away from the current game
 	    break;
 	default:
-		ws.send(JSON.stringify({
-		    type : Messages.MESSAGE,
-		    message : "Unrecognized interaction!"
-		}));
+	    ws.send(JSON.stringify({
+		type : Messages.MESSAGE,
+		message : "Unrecognized interaction!"
+	    }));
 	    break;
 	}
-	
+	    
     });
     
     
@@ -227,7 +231,7 @@ setInterval(function () {
 	    opponent : p2,
 	}));
 	client_names[p2].socket.send(JSON.stringify({
-	    type : Message.GAME,
+	    type : Messages.GAME,
 	    opponent : p1,
 	}));
 	

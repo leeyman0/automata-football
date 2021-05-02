@@ -20,9 +20,15 @@ ws.addEventListener("message", function (e) {
     case Messages.NAME_ACCEPT:
 	// Send the user to a loading screen waiting for players....
 	named = true;
+	space.innerHTML = "";
+	space.appendChild(loading_screen);
 	break;
     case Messages.NAME_REJECT:
 	// Tell the user to select a better name
+	space.innerHTML = "";
+	space.appendChild(name_entry);
+	let name_entry_label = document.getElementById("enter_message");
+	name_entry_label.innerHTML = "That name has been taken. Enter an untaken name: ";
 	break;
     case Messages.TURN_ACCEPT:
 	console.log("Your turn has been accepted by the server!");
@@ -57,11 +63,18 @@ ws.addEventListener("message", function (e) {
 	
 	update_score();
 	break;
-    case Message.VICTORY:
+    case Messages.VICTORY:
+	// Display some sort of victory message
+	console.log("Victory has been achieved!");
 	break;
-    case Message.DEFEAT:
+    case Messages.DEFEAT:
+	// Display a message of defeat
+	console.log("Defeat has been achieved!");
 	break;
-    case SEND_BOARD:
+    case Messages.SEND_BOARD:
+	// The next turn can now be emulated
+	
+	
 	break;
     case Messages.MESSAGE:
 	console.log("Server says: " + instruction.message);
@@ -76,7 +89,7 @@ name_entry_button.addEventListener("click", function () {
     // Submit a message to the server
     wsend({
 	"type" : Messages.NAME,
-	"name" : name_entry_button.value, 
+	"name" : name_entry_input.value, 
     });
     // Go to loading screen
 

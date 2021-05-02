@@ -29,6 +29,10 @@
 	    const screen_width = 1000;
 	    const board_height = 74;
 	    const board_width = 74;
+	    // Game constants
+	    const frames_per_turn = 500;
+	    const frame_interval = 80;
+	    // Programming constants
 	    const spot_width = screen_width / board_width;
 	    const spot_height = screen_height / board_height;
 	    const screen = document.getElementById("gamescreen");
@@ -149,6 +153,27 @@
       // Making the name check screen
       let name_loading_screen = document.createElement("div");
       name_loading_screen.innerHTML = "Waiting for server...";
+
+      // Making the victory and defeat screens
+      let victory_screen = document.createElement("div");
+      let defeat_screen = document.createElement("div");
+
+      let victory_scream = document.createElement("h3");
+      let defeat_scream = document.createElement("h3");
+      victory_scream.innerHTML = "Victory!";
+      defeat_scream.innerHTML = "Defeat!";
+      victory_screen.appendChild(victory_scream);
+      defeat_screen.appendChild(defeat_scream);
+      
+      let end_reason = document.createElement("p");
+      victory_screen.appendChild(end_reason);
+      defeat_screen.appendChild(end_reason);
+      
+      let continue_button = document.createElement("button");
+      continue_button.innerHTML = "Continue";
+      victory_screen.appendChild(continue_button);
+      defeat_screen.appendChild(continue_button);
+      // Javascript is such an expressive language!
       
       // Setting the name entry layer to default
       let space = document.getElementById("gamearea");
