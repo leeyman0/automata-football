@@ -153,7 +153,7 @@ nextbutton.addEventListener("click", function () {
     let board = image.map(function (row) {
 	return row.slice(0, board_width / 2);
     });
-
+    // console.log(board);
     // Saying to the server, this is our turn!
     wsend({
 	"type" : Messages.TURN,

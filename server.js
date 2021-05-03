@@ -250,14 +250,15 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
     let client_name = undefined; 
     
     ws.on("message", function (data) {
+	let msg;
 	try {
-	    const message = JSON.parse(data);
+	    msg = JSON.parse(data);
 	} catch (e) {
 	    ws.send(message("Nice try redditor!"));
 	    return;
 	}
 	// The type of the message counts, for more information... message_protocol.js
-	switch (message.type) {
+	switch (msg.type) {
 	case Messages.NAME:
 	    // clients can send their own information using the browser. Therefore, some sanitization is necessary
 	    // If name is not undefined, we already have a name
@@ -273,7 +274,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    }
 
 	    // Other types of data can be encoded in the object, even though it has been designated to be a string
-	    if ((typeof message.name) !== "string") {
+	    if ((typeof msg.name) !== "string") {
 		ws.send(message("Your name is not a string!"));
 		ws.send(JSON.stringify({
 		    type : Messages.NAME_REJECT,
@@ -282,7 +283,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    }
 	    
 	    // Making sure that we got input
-	    if (message.name === "") {
+	    if (msg.name === "") {
 		ws.send(JSON.stringify({
 		    type : Messages.MESSAGE,
 		    message : "Empty name detected, not recorded."
@@ -294,18 +295,18 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    }
 	    
 	    // See if the name is taken
-	    if (client_names[message.name] === undefined) {
+	    if (client_names[msg.name] === undefined) {
 
 		// It is paramount that the clients take the names
-		client_names[message.name] = {
+		client_names[msg.name] = {
 		    "socket" : ws,
 		    "game" : false
 		}
 		// Making sure that the client name is set 
-		client_name = message.name;
+		client_name = msg.name;
 		// Enroll the client in the game queue, wait for player two
-		client_queue.push(message.name);
-		console.log(`Client ${message.name} has joined the queue!`);
+		client_queue.push(msg.name);
+		console.log(`Client ${msg.name} has joined the queue!`);
 		ws.send(JSON.stringify({
 		    type : Messages.NAME_ACCEPT,
 		}));
@@ -323,6 +324,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    // A turn is a half of a board
 	    // First we do a little trolling
 	    let our_game = client_games.get(client_names[client_name].gameid);
+	    // console.log(our_game);
 	    let is_p1 = our_game.p1 === client_name;
 	    // We check to see if the players are all still there, if not declare victory
 	    // Victory has been achieved utility function
@@ -342,8 +344,8 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 		    victory(client_name, "The other player has disconnected!");
 	    }
 	    // Second, check to see if the moves are sane
-	    if (message.turn.length !== board_height ||
-		message.turn.some(function (row) {
+	    if (msg.turn.length !== board_height ||
+		msg.turn.some(function (row) {
 		    return row.length !== board_width / 2;
 		})) {
 		// Turn rejected
@@ -360,13 +362,16 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    // Applying the changes to the game
 	    if (is_p1) {
 		// They are player 1
-		our_game.lhs = message.turn;
+		our_game.lhs = msg.turn;
 		our_game.p1_gone = true;
 	    } else {
 		// They are player 2
-		our_game.rhs = message.turn;
+		our_game.rhs = msg.turn;
 		our_game.p2_gone = true;
 	    }
+	    // console.log("Game after changes: ");
+	    // console.log(our_game);
+	    
 	    // Utility function defeat
 	    function defeat(player, reason) {
 		client_names[player].socket.send(JSON.stringify(
@@ -445,7 +450,7 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	default:
 	    ws.send(JSON.stringify({
 		type : Messages.MESSAGE,
-		message : "Unrecognized interaction!"
+		message : `Unrecognized interaction! ${message}`
 	    }));
 	    break;
 	}
