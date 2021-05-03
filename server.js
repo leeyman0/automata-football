@@ -165,16 +165,16 @@ let http_server = http.createServer(function (request, response) {
 	serveContent("./message_protocol.js", "text/javascript");
     else if (request.url === "/client.js")
 	serveContent("./client.js", "text/javascript");
-    else if (request.url === "/socket_address.js") {
-	// This file is not literal, it just is the way it connects to the server through the websocket
-	response.writeHead(200, {"Content-Type": "text/javascript"});
-	// So that there is the option for extensibility
-	// Works for localhost, but probably not much else
-	let hostname = request.headers.host.split(":")[0]; 
-	response.write(`const socket_config = { hostname : \"${hostname}\",  port : ${ws_port}, \};`);
-	// console.log(request.headers);
-	response.end();
-    }
+    //else if (request.url === "/socket_address.js") {
+    //	// This file is not literal, it just is the way it connects to the server through the websocket/
+    //	response.writeHead(200, {"Content-Type": "text/javascript"});
+    //	// So that there is the option for extensibility
+    //	// Works for localhost, but probably not much else
+    //	let hostname = request.headers.host.split(":")[0]; 
+    //	response.write(`const socket_config = { hostname : \"${hostname}\",  port : ${ws_port}, \};`);
+    //	// console.log(request.headers);
+    //	response.end();
+}
     else
     {
 	console.log(`Requested URL not found: ${request.url}`);

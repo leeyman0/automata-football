@@ -1,5 +1,5 @@
 // Where the backend to frontend code goes
-console.log(socket_config);
+// console.log(socket_config);
 var HOST = location.origin.replace(/^http/, 'ws');
 const ws = new WebSocket(HOST);
 

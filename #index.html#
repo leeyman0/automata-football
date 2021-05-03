@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Automata Football</title>
+    <meta charset="UTF-8">
+  </head>
+  <style>
+    * {
+	font-family: Courier;
+	text-align: center;
+    }
+  </style>
+  <body>
+    <div id="gamearea">
+      <div id="startinginformation">
+	<h3 style="text-align : center;">Automata Football — The Game: How It Works</h3>
+	<p style="text-align : center;">
+	  Hello, and welcome to my website!
+	</p>
+	<br>
+	<p style="text-align : center;">
+	  <i>
+	    Automata football is based off of Conway's game of life;
+	    see <a href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life">Wikipedia</a> for more details.
+	  </i>
+	</p>
+	  <br>
+	<p style="text-align : center;">
+	  Automata Football has one goal — to get as many cells to the end of the opponent's field as possible. 
+	  There are four rounds in automata football, each of them being comprised two stages: a building stage and
+	  a simulation stage. The building stage is when a player builds structures by clicking the cells. This stage
+	  is done when both people have submitted their turns. 
+	  The simulation stage simulates 250 generations of Conway's game of life over 20 seconds.
+	  Only at this point can a touchdown be scored. The person with the most points at the end of the game wins! 
+	</p>
+	<h4 style="text-align : center;">System Requirements</h4>
+	<p style="text-align : center;">
+	  For compatibility, the browser must support SVGs, ES6 Javascript, and Web Sockets. 
+	</p>
+      </div>
+      <div id="gamebox">
+	<!-- This is where we put the scores -->
+	<div id="scorebox"></div>
+	<!-- This is the screen running on the Javascript engine -->
+	<button id="nextiterbutton">Next Turn</button>
+	<br>
+	<svg id="gamescreen" width="1000" height="1000">
+	  <script>
+	    // Game setup goes here
+	    const off_color = "#0000FF";
+	    const on_color = "#FFFFFF";
+	    const end_field_off_color = "#FF0000";
+	    const end_field_on_color = "#FFFFFF";
+	    const opponent_on_color = "#AAAAAA";
+	    const opponent_off_color = "#5555AA";
+	    const opponent_end_field_off_color = "#00FF00";
+	    const opponent_end_field_on_color = "#FFFFFF";
+	    const screen_height = 1000;
+	    const screen_width = 1000;
+	    const board_height = 74;
+	    const board_width = 74;
+	    // Game constants
+	    const frames_per_turn = 250;
+	    const frame_interval = 80;
+	    const turns = 4;
+	    // Programming constants
+	    const spot_width = screen_width / board_width;
+	    const spot_height = screen_height / board_height;
+	    const screen = document.getElementById("gamescreen");
+	    // Initialize screen
+	    // For loops... blecch
+	    // Off and on matrices are used to denote which color to fill in each cell
+	    let off_matrix = [];
+	    let on_matrix = [];
+	    let screen_matrix = [];
+	    for (let i = 0; i < board_height; i++) {
+		let matrix_row = [];
+		let off_matrix_row = [];
+		let on_matrix_row = [];
+		for (let j = 0; j < board_width; j++) {
+		    // Creating an addressable square
+		    let current_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+		    current_rect.setAttribute("x", j * spot_width);
+		    current_rect.setAttribute("y", i * spot_height);
+		    current_rect.setAttribute("width", spot_width);
+		    current_rect.setAttribute("height", spot_height);
+		    current_rect.id = `pixel${i}_${j}`;
+
+		    matrix_row.push(current_rect);
+		    // Adding it to the game screen
+		    screen.appendChild(current_rect);
+		    // Making the off and on matrices, and setting the fill of the gamefield
+		    if (j === 0) {
+			on_matrix_row.push(end_field_on_color);
+			off_matrix_row.push(end_field_off_color);
+			current_rect.setAttribute("fill", end_field_off_color);
+		    }
+		    else if (j < board_width / 2) {
+			on_matrix_row.push(on_color);
+			off_matrix_row.push(off_color);
+			current_rect.setAttribute("fill", off_color);   
+		    } else if (j === board_width - 1) {
+			on_matrix_row.push(opponent_end_field_on_color);
+			off_matrix_row.push(opponent_end_field_off_color);
+			current_rect.setAttribute("fill", opponent_end_field_off_color);
+		    } else {
+			on_matrix_row.push(opponent_on_color);
+			off_matrix_row.push(opponent_off_color);
+			current_rect.setAttribute("fill", opponent_off_color);
+		    }
+		    
+		}
+		on_matrix.push(on_matrix_row);
+		off_matrix.push(off_matrix_row);
+		screen_matrix.push(matrix_row);
+	    }
+	  </script>
+	</svg>
+      </div>
+    </div>
+    <br>
+    <script src="./gameoflife.js"></script>
+    <script src="./message_protocol.js"></script>
+    <script>
+      // Building the game 
+      screen.width = screen_width;
+      screen.height = screen_height;
+
+      const gamebox = document.getElementById("gamebox");
+      const score_box = document.getElementById("scorebox");
+      const intro = document.getElementById("startinginformation");
+      // Game code goes here
+      function image_map(screen, matrix) {
+	  screen.forEach(function (row, row_nr) {
+	      row.forEach(function (col, col_nr) {
+		  col.setAttribute("fill", ((matrix[row_nr][col_nr] === 1) ?
+					    on_matrix[row_nr][col_nr] :
+					    off_matrix[row_nr][col_nr]));
+		  update_score();
+	      });
+	  });
+      }
+      // Initializing the array
+      let image = [];
+      for (let i = 0; i < board_height; i++)
+      {
+	  image.push(new Array(board_width).fill(0));
+      }
+      
+      // Letting the user write data to (only half of the board) each of the cells
+      for (let i = 0; i < board_height; i++)
+	  for (let j = 0; j < board_width / 2; j++)
+      {
+	  document.getElementById(`pixel${i}_${j}`).addEventListener("mousedown", function () {
+	      let pix = document.getElementById(`pixel${i}_${j}`);
+	      // console.log(pix.id + " clicked!");
+	      image[i][j] = (image[i][j] === 0)? 1 : 0;
+	      pix.setAttribute("fill", (image[i][j] === 0)? off_matrix[i][j] : on_matrix[i][j]);
+	  });
+      }
+
+      // This button is primarily for debugging
+      let nextbutton = document.getElementById("nextiterbutton");
+      
+      // Building the name entry layer
+      let name_entry = document.createElement("div");
+      name_entry.appendChild(intro);
+      
+      let name_label = document.createElement("label");
+      name_label.id = "enter_message";
+      name_label.innerHTML = "Enter a name:";
+      name_entry.appendChild(name_label);
+
+      let name_entry_input = document.createElement("input");
+      name_entry_input.type = "text";
+      name_entry.appendChild(name_entry_input);
+
+      let name_entry_button = document.createElement("button");
+      name_entry_button.innerHTML = "Name Submit";
+      name_entry.appendChild(name_entry_button);
+
+      // Making the loading screen
+      let loading_screen = document.createElement("div");
+      loading_screen.innerHTML = "Waiting for players...";
+
+      // Making the name check screen
+      let name_loading_screen = document.createElement("div");
+      name_loading_screen.innerHTML = "Waiting for server...";
+
+      // Making the victory and defeat screens
+      let victory_screen = document.createElement("div");
+      let defeat_screen = document.createElement("div");
+
+      let victory_scream = document.createElement("h3");
+      let defeat_scream = document.createElement("h3");
+      victory_scream.innerHTML = "Victory!";
+      defeat_scream.innerHTML = "Defeat!";
+      victory_screen.appendChild(victory_scream);
+      defeat_screen.appendChild(defeat_scream);
+      
+      let end_reason = document.createElement("p");
+      // victory_screen.appendChild(end_reason);
+      defeat_screen.appendChild(end_reason);
+
+      let victory_end_reason = document.createElement("p");
+      victory_screen.appendChild(victory_end_reason);
+      
+      let continue_button = document.createElement("button");
+      continue_button.innerHTML = "Continue";
+      defeat_screen.appendChild(continue_button);
+      
+      let victory_continue_button = document.createElement("button");
+      victory_continue_button.innerHTML = "Continue";
+      victory_screen.appendChild(victory_continue_button);
+      // Javascript is such an expressive language!
+      
+      // Setting the name entry layer to default
+      let space = document.getElementById("gamearea");
+      space.innerHTML = "";
+      space.appendChild(name_entry);
+
+      // The score bar
+      let player_score = 0;
+      let opponent_score = 0;
+      // This is set to something else when the name_entry exits successfully
+      let player_name = "Jef";
+      let opponent_name = "boddypin98";
+      let turn = 1;
+
+      // Creating the things that we will need for the scorebox
+      let player_div = document.createElement("div");
+      player_div.style = "text-align: left;";
+      let turn_div = document.createElement("div");
+      let opponent_div = document.createElement("div");
+      opponent_div.style = "text-align: right;";
+
+      function simulate_turn() {
+	  // Processes the frames one by one, in order
+	  for (let i = 1; i <= frames_per_turn; i++) {
+	      // Generate a new screen
+	      setTimeout(function () {
+		  image = next_iteration(image);
+		  image_map(screen_matrix, image);
+	      }, i * frame_interval);
+	  }
+      }
+      
+      // Posts the current score to the screen
+      function update_score() {
+	  let deltas = calculate_score_delta(image);
+	  player_score += deltas.player;
+	  opponent_score += deltas.opponent;
+	  player_div.innerHTML = `${player_name}:${player_score}`;
+	  opponent_div.innerHTML = `${opponent_name}:${opponent_score}`;
+
+      }
+      </script>
+    <!-- <script src="socket_address.js"></script> Don't need this anymore -->
+    <script src="client.js"></script>
+  </body>
+</html>
