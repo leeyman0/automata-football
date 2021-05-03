@@ -182,7 +182,7 @@ let http_server = http.createServer(function (request, response) {
     }
 }).listen(web_port);
 
-const wss = new WebSocket.Server({ port : 8085 });
+const wss = new WebSocket.Server({"server" : http_server});
 
 // I created this too late in the game to really use, but it is a valuable abstraction to make
 function message(message_contents) {

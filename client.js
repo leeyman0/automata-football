@@ -2,7 +2,8 @@
 // console.log(socket_config);
 var HOST = location.origin.replace(/^http/, 'ws');
 console.log(`Host: ${HOST}`);
-const ws = new WebSocket(`${HOST}:8085`);
+// My God... this seems to work... fingers crossed!
+const ws = new WebSocket(`${HOST}`);
 
 ws.addEventListener("open", function () {
     console.log("Connected!");
