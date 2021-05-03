@@ -194,9 +194,10 @@ function message(message_contents) {
 
 // This object serves several purposes
 // 1. It is a list of all names currently being used
-// 2. It is a bidirectional pipe-translator for games, telling whose turn it is, as well as the opponent of each
+// 2. It is a bidirectional pipe-translator for games, as well as the opponent of each
 let client_names = {};
 // Client games contains all of the data for the games that the players play by gameid
+// Contains the boards and player names
 // Mapped with game-id (mostly internal usage)
 let client_games = new Map();
 // We are generating new game ids by counting up from zero, like a serial number
@@ -234,11 +235,11 @@ function new_matrix(p1, p2) {
 
 wss.on("connection", function (ws) { // ws is the web client instance for the connection, when it closes, it sends
     // a message. When it sends a message, it also sends a message
-    console.log(`Client connected at ${ws.address}`);
+    console.log(`Client connected`);
 
     ws.send(JSON.stringify({
 	type : Messages.MESSAGE,
-	message : `Your address is ${ws.address}`
+	message : `Your address is unknown`
     }));
 
     ws.send(JSON.stringify({
@@ -246,11 +247,15 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	message : "What is your username?"
     }));
 
-    var client_name = undefined; 
+    let client_name = undefined; 
     
     ws.on("message", function (data) {
-	const message = JSON.parse(data);
-
+	try {
+	    const message = JSON.parse(data);
+	} catch (e) {
+	    ws.send(message("Nice try redditor!"));
+	    return;
+	}
 	// The type of the message counts, for more information... message_protocol.js
 	switch (message.type) {
 	case Messages.NAME:
@@ -463,7 +468,15 @@ setInterval(function () {
     while (client_queue.length >= 2) {
 	// Dequeueing them
 	let p1 = client_queue.shift();
+	// Making sure that p1 is not quit
+	if (client_names[p1] === undefined)
+	    continue;
 	let p2 = client_queue.shift();
+	// Making sure that p2 is not quit
+	if (client_names[p2] === undefined) {
+	    client_queue.unshift(p1);
+	    continue;
+	}
 	
 	// Putting them inside a match
 	client_names[p1].opponent = p2;
