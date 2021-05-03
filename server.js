@@ -174,7 +174,7 @@ let http_server = http.createServer(function (request, response) {
     //	response.write(`const socket_config = { hostname : \"${hostname}\",  port : ${ws_port}, \};`);
     //	// console.log(request.headers);
     //	response.end();
-}
+    // }
     else
     {
 	console.log(`Requested URL not found: ${request.url}`);
@@ -182,7 +182,7 @@ let http_server = http.createServer(function (request, response) {
     }
 }).listen(web_port);
 
-const wss = new WebSocket.Server({ port : 8085 });
+const wss = new WebSocket({ port : 8085 });
 
 // I created this too late in the game to really use, but it is a valuable abstraction to make
 function message(message_contents) {
