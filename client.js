@@ -1,7 +1,8 @@
 // Where the backend to frontend code goes
 // console.log(socket_config);
 var HOST = location.origin.replace(/^http/, 'ws');
-const ws = new WebSocket(HOST);
+console.log(`Host: ${HOST}`);
+const ws = new WebSocket(`${HOST}:8085`);
 
 ws.addEventListener("open", function () {
     console.log("Connected!");
