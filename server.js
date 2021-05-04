@@ -447,6 +447,9 @@ wss.on("connection", function (ws) { // ws is the web client instance for the co
 	    client_queue.push(client_name);
 	    
 	    break;
+	case Messages.PING_RESPOND:
+	    // Do nothing, This is so Heroku doesn't close a connection on you
+	    break;
 	default:
 	    ws.send(JSON.stringify({
 		type : Messages.MESSAGE,
@@ -520,3 +523,12 @@ setInterval(function () {
 	client_names[p2].socket.send(message(`You are in the game with ID #${cgid} as P2`));
     }
 }, 1000);
+
+// Pinging each client to fix Heroku idle closures 
+setInterval(function () {
+    Object.values(client_names).forEach(function (player) {
+	// Ping the client
+	if (player !== undefined)
+	    player.socket.send(JSON.stringify({type : Messages.PING}));
+    });
+}, 2000);
